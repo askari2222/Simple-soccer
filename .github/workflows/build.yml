@@ -1,32 +1,43 @@
 name: Build Android APK
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+on: [push, pull_request]
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: kivy/kivy:latest
     
     steps:
     - uses: actions/checkout@v4
     
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
-    
-    - name: Install system dependencies
+    - name: Install additional dependencies
       run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential git python3-dev ffmpeg libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev zlib1g-dev openjdk-11-jdk
+        apt-get update
+        apt-get install -y git openjdk-11-jdk-headless
+        pip install buildozer cython
     
-    - name: Install Python packages
+    - name: Create buildozer.spec
       run: |
-        pip install --upgrade pip
-        pip install buildozer cython kivy
+        cat > buildozer.spec << 'EOF'
+        [app]
+        title = Draw Checker
+        package.name = drawchecker
+        package.domain = org.drawchecker
+        source.dir = .
+        version = 0.1
+        requirements = python3,kivy
+        orientation = portrait
+        fullscreen = 0
+        android.permissions = INTERNET
+        android.api = 31
+        android.minapi = 21
+        android.accept_sdk_license = True
+
+        [buildozer]
+        log_level = 2
+        warn_on_root = 1
+        EOF
     
     - name: Build APK
       run: buildozer android debug
